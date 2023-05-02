@@ -1,2 +1,2 @@
 # crunchyroll-mal
-Use crunchyroll and mal apis to add crunchyroll watch history to mal
+Use Crunchyroll and My Anime List apis to add Crunchyroll watch history to MAL
