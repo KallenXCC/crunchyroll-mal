@@ -10,7 +10,8 @@ fetch(url, {
     'Content-Type': 'application/x-www-form-urlencoded'
   },
   body: new URLSearchParams({
-    'status': 'watching'
+    'status': 'watching',
+    'tags': 'crunchyroll-mal'
   })
 })
   .then(response => response.json())
