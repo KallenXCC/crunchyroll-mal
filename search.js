@@ -1,11 +1,14 @@
 const token = 'ACCESS_TOKEN';
 var url = 'https://api.myanimelist.net/v2/anime?';
-var query = 'mashle';
+var query = 'Kamikatsu';
 url = url + 'q=' + query;
-var limit = '1';
+var limit = 1;
 url = url + '&limit=' + limit;
 var offset = '';
-var fields = '';
+var fields = 'alternative_titles';
+url = url + '&fields=' + fields;
+var nsfw = true;
+url = url + '&nsfw=' + nsfw;
 
 fetch(url, {
   method: 'GET',
@@ -15,10 +18,12 @@ fetch(url, {
 })
   .then(response => response.json())
   .then(data => {
-    var result = data.data[0].node;
-    var id = result.id;
-    var title = result.title;
-    console.log(id);
-    console.log(title);
+    console.log(data);
+    for(let i = 0; i < data.data.length; i++) {
+        var result = data.data[i].node;
+        console.log('ID: ' + result.id);
+        console.log('Title: ' + result.title);
+        console.log(result.alternative_titles);
+    }
   })
   .catch(error => console.error(error));
