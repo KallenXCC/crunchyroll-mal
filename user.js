@@ -1,4 +1,4 @@
-const token = 'ACCESS_TOKEN_HERE';
+const token = 'ACCESS_TOKEN';
 const url = 'https://api.myanimelist.net/v2/users/@me?fields=anime_statistics';
 
 fetch(url, {
