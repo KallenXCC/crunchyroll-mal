@@ -5,6 +5,15 @@ use crunchyroll_rs::list::WatchHistoryEntry;
 use std::fs::File;
 use std::io::prelude::*;
 use std::env;
+use std::collections::HashMap;
+use std::io::BufWriter;
+use chrono::{DateTime, Utc};
+
+#[derive(Debug)]
+struct TitleInfo {
+    episodes_watched: usize,
+    date_played: DateTime<Utc>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,49 +24,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .login_with_credentials(email, password)
         .await?;
 
-    let mut file = File::create("watchHistory.txt")?;
-
-    let mut total = 0;
     let mut history = crunchyroll.watch_history();
+    let mut anime_watched: HashMap<String, TitleInfo> = HashMap::new();
+    let mut invalid_titles: Vec<String> = Vec::new();
+
     while let Some(item) = history.next().await {
         match item? {
             WatchHistoryEntry {id: entry, parent_id, parent_type, date_played, playhead, fully_watched, panel} => {
-                total += 1;
-                let anime_title: String;
-                let format: String;
-                match panel {
-                    MediaCollection::Series(series) => {
-                        format = String::from("Series");
-                        anime_title = series.title;
+                if fully_watched {
+                    let anime_title: String;
+                    match panel {
+                        MediaCollection::Series(series) => {
+                            anime_title = series.title;
+                        }
+                        MediaCollection::Season(season) => {
+                            anime_title = season.title;
+                        }
+                        MediaCollection::Episode(episode) => {
+                            anime_title = episode.season_title;
+                        }
+                        MediaCollection::MovieListing(movie_list) => {
+                            anime_title = movie_list.title;
+                        }
+                        MediaCollection::Movie(movie) => {
+                            anime_title = movie.title;
+                        }
+                        MediaCollection::MusicVideo(amv) => {
+                            anime_title = amv.title;
+                        }
+                        MediaCollection::Concert(conc) => {
+                            anime_title = conc.title;
+                        }
                     }
-                    MediaCollection::Season(season) => {
-                        format = String::from("Season");
-                        anime_title = season.title;
+                    if anime_title.trim().is_empty() || !anime_title.chars().any(char::is_alphanumeric) {
+                        invalid_titles.push(entry);
+                        continue;
                     }
-                    MediaCollection::Episode(episode) => {
-                        format = String::from("Episode");
-                        anime_title = episode.series_title;
-                    }
-                    MediaCollection::MovieListing(movie_list) => {
-                        format = String::from("Movie Listing");
-                        anime_title = movie_list.title;
-                    }
-                    MediaCollection::Movie(movie) => {
-                        format = String::from("Movie");
-                        anime_title = movie.title;
-                    }
-                    MediaCollection::MusicVideo(amv) => {
-                        format = String::from("Anime Music Video");
-                        anime_title = amv.title;
-                    }
-                    MediaCollection::Concert(conc) => {
-                        format = String::from("Concert");
-                        anime_title = conc.title;
+
+                    if !anime_title.contains("(English Dub)") {
+                        // Format date_played to display only the date without time
+                        let title_info = anime_watched.entry(anime_title.clone()).or_insert(TitleInfo {
+                            episodes_watched: 0,
+                            date_played,
+                        });
+                        title_info.episodes_watched += 1;
                     }
                 }
-                let line = format!("Entry {}:Type: {} \tTitle of entry: {}\n",total, format, anime_title);
-                file.write_all(&*line.into_bytes())?;
             }
+        }
+    }
+    let mut sorted_alpha: Vec<_> = anime_watched.iter().collect();
+    sorted_alpha.sort_by(|a, b| a.0.cmp(b.0));
+    let mut file_alpha = BufWriter::new(File::create("watchHistoryAlpha.txt")?);
+    for (title, title_info) in sorted_alpha {
+        let line = format!("Title: {}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
+        file_alpha.write_all(line.as_bytes())?;
+    }
+
+    let mut sorted_chrono: Vec<_> = anime_watched.iter().collect();
+    sorted_chrono.sort_by(|a, b| b.1.date_played.cmp(&a.1.date_played));
+    let mut file_chrono = BufWriter::new(File::create("watchHistoryChrono.txt")?);
+    for (title, title_info) in sorted_chrono {
+        let line = format!("Title: {}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
+        file_chrono.write_all(line.as_bytes())?;
+    }
+
+    if !invalid_titles.is_empty() {
+        let mut file_invalid = BufWriter::new(File::create("invalidTitles.txt")?);
+        for entry in &invalid_titles {
+            writeln!(file_invalid, "{:?}", entry)?;
         }
     }
 

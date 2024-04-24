@@ -33,6 +33,10 @@ updatelist.js adds an anime to the currently watching list
 main.js puts these components together  
 
 history.rs compiles titles of all anime in watch history and writes to file
+watchHistoryAlpha.txt sorts anime alphabetically
+watchHistoryChrono.txt sorts anime by date played reverse chronologically
+invalidTitles.txt includes entries of anime with empty titles
+anime titles with (English Dub) are removed because I didn't watch most of those, remember to remove this for future use
 
 ## TODO
-Map series titles and sort alphabetically to get rid of duplicates
+Investigate invalid/empty titles
