@@ -8,6 +8,7 @@ use std::env;
 use std::collections::HashMap;
 use std::io::BufWriter;
 use chrono::{DateTime, Utc};
+use crunchyroll_rs::Series;
 
 #[derive(Debug)]
 struct TitleInfo {
@@ -30,13 +31,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some(item) = history.next().await {
         match item? {
-            WatchHistoryEntry {id: entry, parent_id, parent_type, date_played, playhead, fully_watched, panel} => {
+            WatchHistoryEntry {id: entry, parent_id, parent_type, date_played, playhead: _, fully_watched, panel} => {
                 if fully_watched {
                     let anime_title: String;
                     match panel {
-                        MediaCollection::Series(series) => {
-                            anime_title = series.title;
-                        }
                         MediaCollection::Season(season) => {
                             anime_title = season.title;
                         }
@@ -55,9 +53,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         MediaCollection::Concert(conc) => {
                             anime_title = conc.title;
                         }
+                        MediaCollection::Series(_series) => {
+                            let series: Series = crunchyroll.media_from_id(parent_id).await?;
+                            anime_title = series.title;
+                        }
                     }
                     if anime_title.trim().is_empty() || !anime_title.chars().any(char::is_alphanumeric) {
                         invalid_titles.push(entry);
+                        invalid_titles.push(parent_type);
+                        invalid_titles.push(date_played.to_string());
+                        invalid_titles.push("==========".to_string());
                         continue;
                     }
 
@@ -77,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sorted_alpha.sort_by(|a, b| a.0.cmp(b.0));
     let mut file_alpha = BufWriter::new(File::create("watchHistoryAlpha.txt")?);
     for (title, title_info) in sorted_alpha {
-        let line = format!("Title: {}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
+        let line = format!("{}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
         file_alpha.write_all(line.as_bytes())?;
     }
 
@@ -85,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sorted_chrono.sort_by(|a, b| b.1.date_played.cmp(&a.1.date_played));
     let mut file_chrono = BufWriter::new(File::create("watchHistoryChrono.txt")?);
     for (title, title_info) in sorted_chrono {
-        let line = format!("Title: {}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
+        let line = format!("{}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
         file_chrono.write_all(line.as_bytes())?;
     }
 
