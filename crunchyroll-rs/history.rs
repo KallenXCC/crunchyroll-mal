@@ -7,10 +7,12 @@ use std::io::prelude::*;
 use std::env;
 use std::collections::HashMap;
 use std::io::BufWriter;
-use chrono::{DateTime, Utc};
 use crunchyroll_rs::Series;
+use chrono::{DateTime, Utc};
+use serde_json;
+use serde::{Serialize, Serializer};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct TitleInfo {
     episodes_watched: usize,
     date_played: DateTime<Utc>,
@@ -67,7 +69,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     if !anime_title.contains("(English Dub)") {
-                        // Format date_played to display only the date without time
                         let title_info = anime_watched.entry(anime_title.clone()).or_insert(TitleInfo {
                             episodes_watched: 0,
                             date_played,
@@ -78,11 +79,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+
     let mut sorted_alpha: Vec<_> = anime_watched.iter().collect();
     sorted_alpha.sort_by(|a, b| a.0.cmp(b.0));
     let mut file_alpha = BufWriter::new(File::create("watchHistoryAlpha.txt")?);
     for (title, title_info) in sorted_alpha {
-        let line = format!("{}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
+        let line = format!(
+            "{}\tEpisodes Watched: {}\tDate Played: {}\n",
+            title,
+            title_info.episodes_watched,
+            title_info.date_played.format("%m-%d-%Y")
+        );
         file_alpha.write_all(line.as_bytes())?;
     }
 
@@ -90,9 +97,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sorted_chrono.sort_by(|a, b| b.1.date_played.cmp(&a.1.date_played));
     let mut file_chrono = BufWriter::new(File::create("watchHistoryChrono.txt")?);
     for (title, title_info) in sorted_chrono {
-        let line = format!("{}\tEpisodes Watched: {}\tDate Played: {}\n", title, title_info.episodes_watched, title_info.date_played.format("%m-%d-%Y"));
+        let line = format!(
+            "{}\tEpisodes Watched: {}\tDate Played: {}\n",
+            title,
+            title_info.episodes_watched,
+            title_info.date_played.format("%m-%d-%Y")
+        );
         file_chrono.write_all(line.as_bytes())?;
     }
+
+    let json_data = serde_json::to_string_pretty(&anime_watched)?;
+    let mut file = BufWriter::new(File::create("watchHistory.json")?);
+    file.write_all(json_data.as_bytes())?;
 
     if !invalid_titles.is_empty() {
         let mut file_invalid = BufWriter::new(File::create("invalidTitles.txt")?);

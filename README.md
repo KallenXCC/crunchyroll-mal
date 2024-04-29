@@ -22,23 +22,25 @@ user.js gets the MAL user connected to the access token
  * INPUT: ACCESS_TOKEN  
  * OUTPUT: MAL user info, including user ID  
 
-search.js finds a specified anime on MAL by title or alternative titles  
- * INPUT: anime title  
- * OUTPUT: MAL anime entry, including anime ID  
+search.js searches for anime by titles  
+ * INPUT: watchHistory.json (anime titles)
+ * OUTPUT: searchResults.json (MAL anime entry, including anime ID)  
 
 updatelist.js adds an anime to the currently watching list  
  * INPUT: MAL anime ID, ACCESS_TOKEN  
- * OUTPUT: modified list entry  
-
-main.js puts these components together  
+ * OUTPUT: modified list entry   
 
 history.rs compiles titles of all anime in watch history and writes to file
  * INPUT: crunchyroll email and password
- * OUTPUT: watch history (title, episodes watched, date played) sorted into three files
+ * OUTPUT: watch history (title, episodes watched, date played) sorted into four files
+ * watchHistory.json for passing the information to JS
  * watchHistoryAlpha.txt sorts anime alphabetically
  * watchHistoryChrono.txt sorts anime by date played reverse chronologically
  * invalidTitles.txt includes entries of anime with empty titles (series titles were empty so parent_id -> series.title was used instead)
  * anime titles with (English Dub) are removed because I didn't watch most of those, remember to remove this for future use
 
 ## TODO
-have js parse the txt output from rs
+search error handling and match confidence
+ * compare # of searches to # of matches
+ * compare # of duplicate IDs
+ * pass on episodes watched and date watched to JS

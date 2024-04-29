@@ -1,29 +1,52 @@
+const fs = require('fs');
+
 const token = 'ACCESS_TOKEN';
 var url = 'https://api.myanimelist.net/v2/anime?';
-var query = 'Kamikatsu';
-url = url + 'q=' + query;
 var limit = 1;
-url = url + '&limit=' + limit;
-var offset = '';
 var fields = 'alternative_titles';
-url = url + '&fields=' + fields;
 var nsfw = true;
-url = url + '&nsfw=' + nsfw;
 
-fetch(url, {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`
+const watchHistoryPath = './crunchyroll-rs/watch-history/watchHistory.json';
+const watchHistory_json = fs.readFileSync(watchHistoryPath, 'utf8');
+const animeTitles = [];
+try {
+  const watchHistory = JSON.parse(watchHistory_json);
+  for (const title in watchHistory) {
+      if (watchHistory.hasOwnProperty(title)) {
+          animeTitles.push(title);
+      }
   }
-})
-  .then(response => response.json())
-  .then(data => {
-    console.log(data);
-    for(let i = 0; i < data.data.length; i++) {
-        var result = data.data[i].node;
-        console.log('ID: ' + result.id);
-        console.log('Title: ' + result.title);
-        console.log(result.alternative_titles);
-    }
-  })
-  .catch(error => console.error(error));
+} catch (error) {
+  console.error('Error parsing watchHistory.json:', error);
+}
+
+var searchResults = [];
+
+function searchAnime(query) {
+    var searchUrl = url + 'q=' + query + '&limit=' + limit + '&fields=' + fields + '&nsfw=' + nsfw;
+
+    return fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.data.length > 0) {
+            var result = data.data[0].node;
+            result.query = query;
+            searchResults.push(result);
+            console.log('Query completed:', query);
+        } else {
+            console.log('Anime not found: ' + query);
+        }
+    })
+    .catch(error => console.error(error));
+}
+
+Promise.all(animeTitles.map(searchAnime))
+    .then(() => {
+        fs.writeFileSync('searchResults.json', JSON.stringify(searchResults, null, 2));
+        console.log('Search results written to searchResults.json');
+    });
