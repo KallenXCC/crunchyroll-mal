@@ -7,7 +7,7 @@ https://myanimelist.net/clubs.php?cid=13727
 ## Creating/updating MAL authorization tokens
 https://myanimelist.net/blog.php?eid=835707
 
-## Crunchyroll API
+## Crunchyroll API by CrunchyLabs
 https://github.com/crunchy-labs/crunchyroll-rs?tab=readme-ov-file
 
 Watch History Example:
