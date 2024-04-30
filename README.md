@@ -41,6 +41,6 @@ history.rs compiles titles of all anime in watch history and writes to file
 
 ## TODO
 search error handling and match confidence
- * compare # of searches to # of matches
  * compare # of duplicate IDs
- * pass on episodes watched and date watched to JS
+create internal DB / cache so no unnecessary requests are made
+ * investigate DBs and caching
