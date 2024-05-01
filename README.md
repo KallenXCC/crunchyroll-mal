@@ -39,8 +39,11 @@ history.rs compiles titles of all anime in watch history and writes to file
  * invalidTitles.txt includes entries of anime with empty titles (series titles were empty so parent_id -> series.title was used instead)
  * anime titles with (English Dub) are removed because I didn't watch most of those, remember to remove this for future use
 
+MongoDB
+mongodb+srv://KallenXCC:<password>@crunchyroll-mal.2osby6y.mongodb.net/
+
 ## TODO
-search error handling and match confidence
- * compare # of duplicate IDs
-create internal DB / cache so no unnecessary requests are made
- * investigate DBs and caching
+index DB by anime ID
+handle insertion behavior
+insert watchHistory
+don't search for anime that already are in watchHistory
