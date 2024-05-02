@@ -43,7 +43,6 @@ MongoDB
 mongodb+srv://KallenXCC:<password>@crunchyroll-mal.2osby6y.mongodb.net/
 
 ## TODO
-index DB by anime ID
+index DB by anime ID / title
 handle insertion behavior
-insert watchHistory
 don't search for anime that already are in watchHistory

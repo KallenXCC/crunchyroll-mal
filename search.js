@@ -3,11 +3,9 @@ const { MongoClient } = require('mongodb');
 
 const uri = 'mongodb+srv://KallenXCC:<password>@crunchyroll-mal.2osby6y.mongodb.net/';
 const dbName = 'crunchyroll-mal';
+const colWatchHistory = 'watchHistory';
+const colSearchResults = 'searchResults';
 const token = 'ACCESS_TOKEN';
-var url = 'https://api.myanimelist.net/v2/anime?';
-var limit = 1;
-var fields = 'alternative_titles';
-var nsfw = true;
 
 const watchHistoryPath = './crunchyroll-rs/watch-history/watchHistory.json';
 const watchHistory_json = fs.readFileSync(watchHistoryPath, 'utf8');
@@ -23,6 +21,7 @@ try {
           });
       }
   }
+  insertDataToMongoDB(animeTitles, colWatchHistory);
 } catch (error) {
   console.error('Error parsing watchHistory.json:', error);
 }
@@ -36,7 +35,7 @@ processSearches()
         fs.writeFileSync('searchResults.json', JSON.stringify(searchResults, null, 2));
         console.log('Search results written to searchResults.json');
         console.log(numMatches, '/', numSearches, ' searches matched');
-        insertDataToMongoDB(searchResults);
+        insertDataToMongoDB(searchResults, colSearchResults);
     })
     .catch(error => console.error(error));
 
@@ -52,6 +51,10 @@ async function searchAnime(query) {
     if(searchTitle.length > 60) {
         searchTitle = searchTitle.substr(0, 60);
     }
+    var url = 'https://api.myanimelist.net/v2/anime?';
+    var limit = 1;
+    var fields = 'alternative_titles';
+    var nsfw = true;
     var searchUrl = url + 'q=' + searchTitle + '&limit=' + limit + '&fields=' + fields + '&nsfw=' + nsfw;
     numSearches++;
 
@@ -111,14 +114,14 @@ async function handleHttpError(response) {
     }
 }
 
-async function insertDataToMongoDB(data) {
+async function insertDataToMongoDB(data, collectionName) {
     const client = new MongoClient(uri);
     try {
         await client.connect();
         console.log('Connected to MongoDB');
 
         const db = client.db(dbName);
-        const collection = db.collection('searchResults');
+        const collection = db.collection(collectionName);
 
         const result = await collection.insertMany(data);
         console.log(`${result.insertedCount} documents inserted into MongoDB`);
