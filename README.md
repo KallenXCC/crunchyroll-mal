@@ -43,6 +43,9 @@ MongoDB
 mongodb+srv://KallenXCC:<password>@crunchyroll-mal.2osby6y.mongodb.net/
 
 ## TODO
-index DB by anime ID / title
 handle insertion behavior
+    don't insert entries that already exist, update them instead
+    continue checking inserting even if some entries already exist
+    handle errors more gracefully
+try to sort the database reverse chronologically
 don't search for anime that already are in watchHistory

@@ -58,6 +58,7 @@ async function searchAnime(query) {
     var searchUrl = url + 'q=' + searchTitle + '&limit=' + limit + '&fields=' + fields + '&nsfw=' + nsfw;
     numSearches++;
 
+    console.log('querying MyAnimeList...');
     const data = await fetchWithRetries(searchUrl, {
         method: 'GET',
         headers: {
@@ -123,8 +124,9 @@ async function insertDataToMongoDB(data, collectionName) {
         const db = client.db(dbName);
         const collection = db.collection(collectionName);
 
-        const result = await collection.insertMany(data);
-        console.log(`${result.insertedCount} documents inserted into MongoDB`);
+        const options = { ordered: false, upsert: true };
+        const result = await collection.insertMany(data, options);
+        console.log(`${result.insertedCount} documents inserted or updated in MongoDB`);
     } catch (error) {
         console.error('Error inserting data into MongoDB:', error);
     } finally {
