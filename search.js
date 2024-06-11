@@ -1,11 +1,12 @@
 const fs = require('fs');
 const { MongoClient } = require('mongodb');
 
+const token = 'ACCESS_TOKEN';
 const uri = 'mongodb+srv://KallenXCC:<password>@crunchyroll-mal.2osby6y.mongodb.net/';
 const dbName = 'crunchyroll-mal';
 const colWatchHistory = 'watchHistory';
 const colSearchResults = 'searchResults';
-const token = 'ACCESS_TOKEN';
+const MONGO_DUPLICATE_KEY_ERROR_CODE = 11000;
 
 const watchHistoryPath = './crunchyroll-rs/watch-history/watchHistory.json';
 const watchHistory_json = fs.readFileSync(watchHistoryPath, 'utf8');
@@ -21,7 +22,6 @@ try {
           });
       }
   }
-  insertDataToMongoDB(animeTitles, colWatchHistory);
 } catch (error) {
   console.error('Error parsing watchHistory.json:', error);
 }
@@ -39,11 +39,35 @@ processSearches()
     })
     .catch(error => console.error(error));
 
-
 async function processSearches() {
-    for (const query of animeTitles) {
-        await searchAnime(query);
+    const client = new MongoClient(uri);
+    try {
+        await client.connect();
+        console.log('Connected to MongoDB for processing searches');
+        
+        const db = client.db(dbName);
+
+        for (const query of animeTitles) {
+            const existingEntry = await searchResultExists(db, query.title);
+            if (!existingEntry) {
+                await searchAnime(query);
+            } else {
+                console.log(`Entry with title '${query.title}' already exists in searchResults collection. Skipping search.`);
+                searchResults.push(query);
+            }
+        }
+    } catch (error) {
+        console.error('Error processing searches', error);
+    } finally {
+        await client.close();
+        console.log('Disconnected from MongoDB, processed searches');
     }
+}
+
+async function searchResultExists(db, title) {
+    const collection = db.collection(colSearchResults);
+    const existingDocument = await collection.findOne({ title });
+    return !!existingDocument;
 }
 
 async function searchAnime(query) {
@@ -117,9 +141,10 @@ async function handleHttpError(response) {
 
 async function insertDataToMongoDB(data, collectionName) {
     const client = new MongoClient(uri);
+    let collection;
     try {
         await client.connect();
-        console.log('Connected to MongoDB');
+        console.log(`Connected to MongoDB for inserting into ${collectionName}`);
 
         const db = client.db(dbName);
         const collection = db.collection(collectionName);
@@ -128,9 +153,20 @@ async function insertDataToMongoDB(data, collectionName) {
         const result = await collection.insertMany(data, options);
         console.log(`${result.insertedCount} documents inserted or updated in MongoDB`);
     } catch (error) {
-        console.error('Error inserting data into MongoDB:', error);
+        if(!collection) {
+            console.error("Collection is empty");
+        } else if (error.code === MONGO_DUPLICATE_KEY_ERROR_CODE) {
+            for (const errorDetail of error.writeErrors) {
+                const title = errorDetail.err.op.title;
+                const { date_played, episodes_watched } = errorDetail.err.op;
+                await collection.updateOne({ title: title }, { $set: { date_played, episodes_watched } });
+                console.log(`Document with title "${title}" updated.`);
+            }
+        } else {
+            console.error('Unexpected error inserting data into MongoDB:', error);
+        }
     } finally {
         await client.close();
-        console.log('Disconnected from MongoDB');
+        console.log(`Disconnected from MongoDB, ${collectionName}`);
     }
 }
